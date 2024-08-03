@@ -7,7 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
-import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.os.Build
 import android.os.Bundle
 import android.os.RemoteException
@@ -30,7 +30,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.phonedataapp.ui.theme.PhoneDataAppTheme
 import android.provider.Settings
-import android.telephony.TelephonyManager
 import java.util.Calendar
 
 class MainActivity : ComponentActivity() {
@@ -133,6 +132,7 @@ fun formatBytes(bytes: Long): String {
     return String.format("%.2f %s", value, units[unitIndex])
 }
 
+
 fun getNetworkStats(context: Context, packageName: String): Pair<Long, Long> {
     val networkStatsManager = context.getSystemService(Context.NETWORK_STATS_SERVICE) as NetworkStatsManager
     val calendar = Calendar.getInstance()
@@ -147,13 +147,14 @@ fun getNetworkStats(context: Context, packageName: String): Pair<Long, Long> {
         val uid = context.packageManager.getApplicationInfo(packageName, 0).uid
 
         // Wi-Fi stats
-        val wifiStats = networkStatsManager.queryDetailsForUid(
-            ConnectivityManager.TYPE_WIFI,
-            null,
-            startTime,
-            endTime,
-            uid
-        )
+        val wifiStats =
+            networkStatsManager.queryDetailsForUid(
+                NetworkCapabilities.TRANSPORT_WIFI,
+                null,
+                startTime,
+                endTime,
+                uid
+            )
         var bucket = NetworkStats.Bucket()
         while (wifiStats.hasNextBucket()) {
             wifiStats.getNextBucket(bucket)
@@ -162,13 +163,14 @@ fun getNetworkStats(context: Context, packageName: String): Pair<Long, Long> {
         wifiStats.close()
 
         // Mobile stats
-        val mobileStats = networkStatsManager.queryDetailsForUid(
-            ConnectivityManager.TYPE_MOBILE,
-            null,
-            startTime,
-            endTime,
-            uid
-        )
+        val mobileStats =
+            networkStatsManager.queryDetailsForUid(
+                NetworkCapabilities.TRANSPORT_CELLULAR,
+                null,
+                startTime,
+                endTime,
+                uid
+            )
         while (mobileStats.hasNextBucket()) {
             mobileStats.getNextBucket(bucket)
             mobileBytes += bucket.rxBytes + bucket.txBytes
@@ -183,9 +185,4 @@ fun getNetworkStats(context: Context, packageName: String): Pair<Long, Long> {
     }
 
     return Pair(wifiBytes, mobileBytes)
-}
-
-fun getSubscriberId(context: Context): String {
-    val tm = context.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
-    return tm.subscriberId ?: ""
 }
